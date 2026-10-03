@@ -1,17 +1,23 @@
-import { Text, View, StyleSheet } from "react-native";
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
+import { AppSplash } from "../components/AppSplash";
+import { useAuth } from "../providers/AuthProvider";
 
-export default function Index() {
-  return (
-    <View style={styles.container}>
-      <Text>Edit src/app/index.tsx to edit this screen.</Text>
-    </View>
-  );
+const MINIMUM_SPLASH_DURATION_MS = 1500;
+
+export default function SplashScreen() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const [hasSplashElapsed, setHasSplashElapsed] = useState(false);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => setHasSplashElapsed(true), MINIMUM_SPLASH_DURATION_MS);
+    return () => clearTimeout(timeout);
+  }, []);
+
+  useEffect(() => {
+    if (isLoading || !hasSplashElapsed) return;
+    router.replace(isAuthenticated ? "/" : "/login");
+  }, [hasSplashElapsed, isAuthenticated, isLoading]);
+
+  return <AppSplash />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
