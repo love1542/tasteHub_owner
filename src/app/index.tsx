@@ -16,7 +16,7 @@ export default function SplashScreen() {
 
   useEffect(() => {
     if (isLoading || !hasSplashElapsed) return;
-    router.replace(isAuthenticated ? "/" : "/login");
+    router.replace(isAuthenticated ? "/(tabs)" : "/login");
   }, [hasSplashElapsed, isAuthenticated, isLoading]);
 
   return <AppSplash />;

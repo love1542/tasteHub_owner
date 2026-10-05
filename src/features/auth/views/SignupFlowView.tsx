@@ -18,7 +18,7 @@ export function SignupFlowView({ onChangeFlow }: AuthFlowViewProps) {
     password,
     setPassword,
     otpCode,
-    setOtpCode,
+    handleOtpCodeChange,
     error,
     setError,
     feedback,
@@ -85,10 +85,8 @@ export function SignupFlowView({ onChangeFlow }: AuthFlowViewProps) {
               />
             </>
           )}
-          onChange={setOtpCode}
-          subtitle={isEmailOtpStep
-            ? "Email delivery is not connected yet; this is a UI preview."
-            : `6-digit code for ${identity}`}
+          onChange={handleOtpCodeChange}
+          subtitle={`6-digit code sent to ${identity}`}
           title="Enter your verification code"
           value={otpCode}
         />

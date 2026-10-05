@@ -38,7 +38,7 @@ export function useProfileSetup() {
     setIsSubmitting(true);
     try {
       await signIn();
-      router.replace("/");
+      router.replace("/(tabs)");
     } catch {
       setError("Unable to save your profile right now. Please try again.");
     } finally {

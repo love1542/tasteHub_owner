@@ -6,6 +6,6 @@ export default function AuthLayout() {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) return <AppSplash />;
-  if (isAuthenticated) return <Redirect href="/" />;
+  if (isAuthenticated) return <Redirect href="/(tabs)" />;
   return <Stack screenOptions={{ headerShown: false }} />;
 }

@@ -1,5 +1,7 @@
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
+import { ToastService } from "../../../providers/ToastProvider";
+import { useRegisterMutation, useVerifyOtpMutation } from "../../../services/hooks/useAuthMutations";
 import type { AuthMethod } from "../types";
 import { emailSchema, otpCodeSchema, passwordSchema, phoneNumberSchema } from "../validation";
 
@@ -18,6 +20,8 @@ export function useSignupFlow() {
   const [feedback, setFeedback] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const registerMutation = useRegisterMutation();
+  const verifyOtpMutation = useVerifyOtpMutation();
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -67,10 +71,14 @@ export function useSignupFlow() {
   const resendCode = () => {
     if (resendCooldown > 0) return;
 
-    setOtpCode("");
     setError("");
-    setResendCooldown(30);
-    setFeedback(method === "email" ? "Email delivery is not connected yet; this is a UI preview." : "A new demo code is ready.");
+    setFeedback("Resending verification codes is not available yet.");
+  };
+
+  const handleOtpCodeChange = (value: string) => {
+    setOtpCode(value);
+    setError("");
+    setFeedback("");
   };
 
   const handleSubmit = async () => {
@@ -85,24 +93,45 @@ export function useSignupFlow() {
       return;
     }
 
-    if (method === "email" && emailStep === "details") {
-      const passwordValidation = passwordSchema.safeParse(password);
-      if (!passwordValidation.success) {
-        setError(passwordValidation.error.issues[0]?.message ?? "Enter your password to continue.");
-        return;
-      }
-      setEmailStep("otp");
-      setOtpCode("");
-      setResendCooldown(30);
-      setFeedback("Email delivery is not connected yet; this is a UI preview.");
-      return;
-    }
+    if ((method === "email" && emailStep === "details") || (method === "phone" && phoneStep === "phone")) {
+      const identifier = identityValidation.data;
+      let registerPayload: { type: "email" | "phone"; identifier: string; password?: string };
 
-    if (method === "phone" && phoneStep === "phone") {
-      setPhoneStep("otp");
-      setOtpCode("");
-      setResendCooldown(30);
-      setFeedback("A new demo code is ready.");
+      if (method === "email") {
+        const passwordValidation = passwordSchema.safeParse(password);
+        if (!passwordValidation.success) {
+          setError(passwordValidation.error.issues[0]?.message ?? "Enter your password to continue.");
+          return;
+        }
+
+        registerPayload = { type: "email", identifier, password: passwordValidation.data };
+      } else {
+        registerPayload = { type: "phone", identifier };
+      }
+
+      setIsSubmitting(true);
+      try {
+        const response = await registerMutation.mutateAsync(registerPayload);
+        if (!response.success || !response.data?.user_id) {
+          const message = response.message ?? "We couldn't start your registration.";
+          setError(message);
+          ToastService.show(message, "error");
+          return;
+        }
+
+        setIdentity(identifier);
+        setOtpCode("");
+        setResendCooldown(30);
+        setFeedback(response.message ?? "Verification code sent.");
+        if (method === "email") setEmailStep("otp");
+        else setPhoneStep("otp");
+      } catch {
+        const message = "Something went wrong. Please try again.";
+        setError(message);
+        ToastService.show(message, "error");
+      } finally {
+        setIsSubmitting(false);
+      }
       return;
     }
 
@@ -114,7 +143,32 @@ export function useSignupFlow() {
 
     setIsSubmitting(true);
     try {
+      const response = await verifyOtpMutation.mutateAsync({
+        type: method,
+        identifier: identityValidation.data,
+        otpCode: otpValidation.data,
+        purpose: method === "email" ? "register_email" : "register_phone",
+      });
+
+      if (!response.success) {
+        const message = response.message ?? "The verification code could not be confirmed.";
+        setError(message);
+        ToastService.show(message, "error");
+        return;
+      }
+
+      if (!response.data?.access_token) {
+        const message = "Verification succeeded, but the server did not return an access token.";
+        setError(message);
+        ToastService.show(message, "error");
+        return;
+      }
+
       router.push("/profile-setup");
+    } catch {
+      const message = "Something went wrong. Please try again.";
+      setError(message);
+      ToastService.show(message, "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -143,6 +197,7 @@ export function useSignupFlow() {
     setPassword,
     otpCode,
     setOtpCode,
+    handleOtpCodeChange,
     error,
     setError,
     feedback,

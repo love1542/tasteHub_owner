@@ -72,7 +72,7 @@ export function useLoginFlow() {
     setIsSubmitting(true);
     try {
       await signIn();
-      router.replace("/");
+      router.replace("/(tabs)");
     } catch {
       setError("Unable to continue right now. Please try again.");
     } finally {
